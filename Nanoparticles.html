@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nanoparticle Drug Delivery Simulation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            margin-top: 20px;
+        }
+
+        #simulation-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        #canvas {
+            border: 1px solid #ccc;
+            background-color: #ffffff;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .slider {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        input[type="range"] {
+            width: 150px;
+        }
+
+        .target {
+            fill: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Nanoparticle Drug Delivery Simulation</h1>
+    <p>Simulates how nanoparticle size, targeting efficiency, and adhesion strength influence drug delivery to target cancer cells in the bloodstream.</p>
+
+    <div id="simulation-container">
+        <canvas id="canvas" width="800" height="400"></canvas>
+
+        <div class="controls">
+            <div class="slider">
+                <label for="size">Nanoparticle Size (nm)</label>
+                <input type="range" id="size" min="1" max="50" value="10">
+                <span id="sizeValue">10 nm</span>
+            </div>
+
+            <div class="slider">
+                <label for="efficiency">Targeting Efficiency (%)</label>
+                <input type="range" id="efficiency" min="0" max="100" value="50">
+                <span id="efficiencyValue">50%</span>
+            </div>
+
+            <div class="slider">
+                <label for="adhesion">Adhesion Strength (arbitrary units)</label>
+                <input type="range" id="adhesion" min="1" max="100" value="50">
+                <span id="adhesionValue">50</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        const sizeSlider = document.getElementById('size');
+        const efficiencySlider = document.getElementById('efficiency');
+        const adhesionSlider = document.getElementById('adhesion');
+
+        const sizeValue = document.getElementById('sizeValue');
+        const efficiencyValue = document.getElementById('efficiencyValue');
+        const adhesionValue = document.getElementById('adhesionValue');
+
+        const targetRadius = 20;
+        const targets = [
+            { x: 200, y: 200 },
+            { x: 600, y: 100 },
+            { x: 400, y: 300 }
+        ];
+
+        let particles = [];
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < 50; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    size: sizeSlider.value,
+                    delivered: false
+                });
+            }
+        }
+
+        function drawParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw targets
+            for (const target of targets) {
+                ctx.beginPath();
+                ctx.arc(target.x, target.y, targetRadius, 0, Math.PI * 2);
+                ctx.fillStyle = 'red';
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            // Draw particles
+            for (let particle of particles) {
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size / 2, 0, Math.PI * 2);
+                ctx.fillStyle = particle.delivered ? '#3498db' : '#2ecc71';
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+
+        function updateParticles() {
+            const efficiency = efficiencySlider.value / 100;
+            const adhesionStrength = adhesionSlider.value / 100;
+
+            for (let particle of particles) {
+                if (particle.delivered) continue;
+
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+
+                // Reflect off walls
+                if (particle.x - particle.size / 2 < 0 || particle.x + particle.size / 2 > canvas.width) {
+                    particle.vx = -particle.vx;
+                }
+                if (particle.y - particle.size / 2 < 0 || particle.y + particle.size / 2 > canvas.height) {
+                    particle.vy = -particle.vy;
+                }
+
+                // Check for delivery to targets
+                for (const target of targets) {
+                    const dx = target.x - particle.x;
+                    const dy = target.y - particle.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < targetRadius + particle.size / 2) {
+                        if (Math.random() < efficiency * adhesionStrength) {
+                            particle.delivered = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        function update() {
+            updateParticles();
+            drawParticles();
+            requestAnimationFrame(update);
+        }
+
+        sizeSlider.addEventListener('input', () => {
+            sizeValue.textContent = `${sizeSlider.value} nm`;
+            for (let particle of particles) {
+                particle.size = sizeSlider.value;
+            }
+        });
+
+        efficiencySlider.addEventListener('input', () => {
+            efficiencyValue.textContent = `${efficiencySlider.value}%`;
+        });
+
+        adhesionSlider.addEventListener('input', () => {
+            adhesionValue.textContent = adhesionSlider.value;
+        });
+
+        initParticles();
+        update();
+    </script>
+</body>
+</html>
